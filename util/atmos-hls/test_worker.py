@@ -64,7 +64,7 @@ class WorkerTest(unittest.TestCase):
                     '-show_entries', 'stream=codec_name,channels', '-of', 'json',
                     str(station.jobs[-1].directory / 'packager.m3u8')]))
                 self.assertEqual(probe['streams'][0]['codec_name'], 'eac3')
-                self.assertEqual(probe['streams'][0]['channels'], 6)
+                self.assertEqual(probe['streams'][0]['channels'], 2)
             finally:
                 station.close()
             self.assertFalse((station.output / 'master.m3u8').exists())

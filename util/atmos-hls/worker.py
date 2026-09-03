@@ -169,7 +169,7 @@ class Job:
                                     source['path']], capture_output=True, text=True, timeout=15, check=True)
             stream = json.loads(probe.stdout)['streams'][0]
             self.expected_atmos = 'Atmos' in stream.get('profile', '')
-            copy = stream['codec_name'] == 'eac3'
+            copy = stream['codec_name'] == 'eac3' and self.expected_atmos
             if self.expected_atmos:
                 self.original_dec3 = original_dec3(source['path'])
         else:
@@ -183,7 +183,7 @@ class Job:
         if copy:
             command += ['-c:a', 'copy']
         else:
-            command += ['-c:a', 'eac3', '-ac', '6', '-ar', '48000', '-b:a', '768k', '-threads', '2']
+            command += ['-c:a', 'eac3', '-ac', '2', '-ar', '48000', '-b:a', '768k', '-threads', '2']
         if not source['live'] and source['duration']:
             command += ['-t', str(source['duration'])]
         command += ['-f', 'hls', '-hls_time', str(SEGMENT), '-hls_list_size', '120' if self.live else '0',
@@ -315,7 +315,7 @@ class Station:
             previous = entry
         atomic(self.output / 'audio.m3u8', '\n'.join(lines) + '\n')
         objects = max((e['objects'] or 0 for e in self.entries), default=0)
-        channels = f'{objects}/JOC' if objects else '6'
+        channels = f'{objects}/JOC' if objects else '2'
         label = 'Dolby Atmos' if objects else 'Dolby Digital Plus'
         master = ['#EXTM3U', '#EXT-X-VERSION:7',
                   f'#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="dolby",NAME="{label}",DEFAULT=YES,AUTOSELECT=YES,CHANNELS="{channels}",URI="audio.m3u8"',
