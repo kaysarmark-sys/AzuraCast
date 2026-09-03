@@ -296,6 +296,11 @@ final class StationBackendConfiguration extends AbstractArrayEntity
         set (int|string|null $value) => Types::int($value, self::DEFAULT_DUPLICATE_PREVENTION_TIME_RANGE);
     }
 
+    #[OA\Property(description: 'Artist duplicate prevention window in minutes; zero disables artist matching.')]
+    public int $artist_duplicate_prevention_time_range = 120 {
+        set (int|string|null $value) => max(0, Types::int($value, 120));
+    }
+
     #[OA\Property]
     public string $performance_mode = '' {
         set(string|StationBackendPerformanceModes|null $value) {
