@@ -2482,6 +2482,7 @@ export interface StationBackendConfiguration {
      */
     crossfade_smart_margin?: number;
     duplicate_prevention_time_range?: number;
+    artist_duplicate_prevention_time_range?: number;
     performance_mode?: string;
     hls_segment_length?: number;
     hls_segments_in_playlist?: number;
