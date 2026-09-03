@@ -3,3 +3,16 @@
 .run
 /node_modules
 /vendor
+**/__pycache__
+**/*.pyc
+/*.log
+/*-success
+/atmos-test-*
+/atmos-changes.tar.gz
+/build_surround.sh
+/build_atmos.sh
+/deploy_surround.sh
+/deploy_atmos.sh
+/check_station_surround.php
+/verify_surround_install.py
+/Dockerfile.surround

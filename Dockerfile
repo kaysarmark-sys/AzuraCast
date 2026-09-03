@@ -169,6 +169,8 @@ CMD ["--no-main-command"]
 #
 FROM pre-final AS final
 
+COPY ./util/atmos-hls/supervisor.conf /etc/supervisor/full.conf.d/atmos-hls.conf
+
 USER azuracast
 
 WORKDIR /var/azuracast/www
