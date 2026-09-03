@@ -19,13 +19,13 @@
         <template v-if="isBackendEnabled">
             <div class="row g-3 mb-3">
                 <form-group-multi-check
-                    id="edit_form_backend_audio_channels"
+                    id="edit_form_backend_output_mode"
                     class="col-md-12"
-                    :field="r$.backend_config.audio_channels"
-                    :options="audioChannelOptions"
+                    :field="r$.backend_config.output_mode"
+                    :options="outputModeOptions"
                     radio
-                    :label="$gettext('Audio Output Channels')"
-                    :description="$gettext('5.1 preserves surround audio on AAC, Ogg Vorbis, Opus and FLAC outputs. MP3 remains a stereo downmix. Surround mode bypasses audio post-processing and enables shared encoders. Use surround source material and a compatible player; restart the station after changing this setting.')"
+                    :label="$gettext('Stream Mode')"
+                    :description="$gettext('Choose Stereo or Dolby Atmos HLS. Only the selected mode is available to listeners. Restart the station after changing modes. Atmos preserves compatible Dolby Digital Plus files and uses stereo fallback for other audio.')"
                 />
             </div>
             <template v-if="!isAutoCueEnabled">
@@ -445,9 +445,9 @@ const crossfadeOptions = computed<SimpleFormOptionInput>(() => {
     ];
 });
 
-const audioChannelOptions = computed<SimpleFormOptionInput>(() => [
-    { text: $gettext("Stereo (2 channels)"), value: 2 },
-    { text: $gettext("5.1 Surround (6 channels)"), value: 6 },
+const outputModeOptions = computed<SimpleFormOptionInput>(() => [
+    { text: $gettext("Stereo"), value: "stereo" },
+    { text: $gettext("Dolby Atmos (HLS)"), value: "atmos" },
 ]);
 
 const audioProcessingOptions = computed<SimpleFormOptionInput>(() => {

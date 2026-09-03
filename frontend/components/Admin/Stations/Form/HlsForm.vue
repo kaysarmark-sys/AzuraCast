@@ -18,12 +18,13 @@
                     id="edit_form_enable_hls"
                     class="col-md-12"
                     :field="r$.enable_hls"
+                    :disabled="form.backend_config.output_mode === 'atmos'"
                     :label="$gettext('Enable HTTP Live Streaming (HLS)')"
                 />
             </div>
 
             <div
-                v-if="form.enable_hls"
+                v-if="form.enable_hls && form.backend_config.output_mode !== 'atmos'"
                 class="row g-3 mb-3"
             >
                 <form-group-checkbox
@@ -34,16 +35,6 @@
                 />
 
                 <form-group-checkbox
-                    id="edit_form_backend_hls_atmos"
-                    class="col-md-12"
-                    :field="r$.backend_config.hls_atmos"
-                    :label="$gettext('Enable Dolby Atmos HLS Passthrough')"
-                />
-                <p class="text-muted">
-                    {{ $gettext('Adds /atmos/master.m3u8 to this station’s HLS address. Follows the current song with additional buffering. Preserves Dolby Digital Plus Atmos files; other audio plays as ordinary Dolby Digital Plus surround. Crossfades, normalization and other AutoDJ processing are not applied to file playback on this stream.') }}
-                </p>
-
-                <form-group-checkbox
                     id="edit_form_backend_hls_is_default"
                     class="col-md-12"
                     :field="r$.backend_config.hls_is_default"
@@ -52,7 +43,7 @@
             </div>
 
             <div
-                v-if="form.enable_hls"
+                v-if="form.enable_hls && form.backend_config.output_mode !== 'atmos'"
                 class="row g-3 mb-3"
             >
                 <form-group-field

@@ -65,8 +65,7 @@ export const useAdminStationsForm = defineStore("form-admin-stations", () => {
         },
         backend_type: BackendAdapters.Liquidsoap,
         backend_config: {
-            audio_channels: 2,
-            hls_atmos: false,
+            output_mode: "stereo",
             crossfade_type: CrossfadeModes.Normal,
             crossfade: 2,
             crossfade_smart_high: -15,
@@ -163,7 +162,7 @@ export const useAdminStationsForm = defineStore("form-admin-stations", () => {
                 ],
                 backendTab: [
                     fields.backend_type,
-                    fields.backend_config.audio_channels,
+                    fields.backend_config.output_mode,
                     fields.backend_config.crossfade_type,
                     fields.backend_config.crossfade,
                     fields.backend_config.crossfade_smart_high,
@@ -186,7 +185,6 @@ export const useAdminStationsForm = defineStore("form-admin-stations", () => {
                     fields.backend_config.duplicate_prevention_time_range,
                 ],
                 hlsTab: [
-                    fields.backend_config.hls_atmos,
                     fields.enable_hls,
                     fields.backend_config.hls_enable_on_public_player,
                     fields.backend_config.hls_is_default,
