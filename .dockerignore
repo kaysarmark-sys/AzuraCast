@@ -16,3 +16,4 @@
 /check_station_surround.php
 /verify_surround_install.py
 /Dockerfile.surround
+/enable_atmos.php
