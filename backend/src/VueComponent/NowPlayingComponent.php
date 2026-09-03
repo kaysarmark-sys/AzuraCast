@@ -30,7 +30,7 @@ final readonly class NowPlayingComponent implements VueComponentInterface
             'offlineText' => $station->branding_config->offline_text,
             'showAlbumArt' => $widgetCustomization->showAlbumArt && !$customization->hideAlbumArt(),
             'autoplay' => $widgetCustomization->autoplay,
-            'showHls' => $backendConfig->hls_enable_on_public_player,
+            'showHls' => $backendConfig->hls_atmos || $backendConfig->hls_enable_on_public_player,
             'widgetCustomization' => $widgetCustomization,
         ];
     }
