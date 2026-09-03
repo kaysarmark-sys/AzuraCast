@@ -18,6 +18,11 @@ use OpenApi\Attributes as OA;
 #[OA\Schema(schema: "StationBackendConfiguration", type: "object")]
 final class StationBackendConfiguration extends AbstractArrayEntity
 {
+    #[OA\Property(description: 'Enable the separate Atmos-preserving HLS stream.')]
+    public bool $hls_atmos = false {
+        set(string|bool $value) => Types::bool($value, false, true);
+    }
+
     #[OA\Property(description: 'AutoDJ output channels: 2 (stereo) or 6 (5.1 surround).', enum: [2, 6])]
     public int $audio_channels = 2 {
         set (int|string|null $value) => Types::int($value, 2) === 6 ? 6 : 2;
