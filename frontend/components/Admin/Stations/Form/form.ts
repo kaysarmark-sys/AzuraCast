@@ -65,6 +65,7 @@ export const useAdminStationsForm = defineStore("form-admin-stations", () => {
         },
         backend_type: BackendAdapters.Liquidsoap,
         backend_config: {
+            audio_channels: 2,
             crossfade_type: CrossfadeModes.Normal,
             crossfade: 2,
             crossfade_smart_high: -15,
@@ -161,6 +162,7 @@ export const useAdminStationsForm = defineStore("form-admin-stations", () => {
                 ],
                 backendTab: [
                     fields.backend_type,
+                    fields.backend_config.audio_channels,
                     fields.backend_config.crossfade_type,
                     fields.backend_config.crossfade,
                     fields.backend_config.crossfade_smart_high,

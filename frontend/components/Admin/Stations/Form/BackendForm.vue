@@ -17,6 +17,17 @@
         </div>
 
         <template v-if="isBackendEnabled">
+            <div class="row g-3 mb-3">
+                <form-group-multi-check
+                    id="edit_form_backend_audio_channels"
+                    class="col-md-12"
+                    :field="r$.backend_config.audio_channels"
+                    :options="audioChannelOptions"
+                    radio
+                    :label="$gettext('Audio Output Channels')"
+                    :description="$gettext('5.1 preserves surround audio on AAC, Ogg Vorbis, Opus and FLAC outputs. MP3 remains a stereo downmix. Surround mode bypasses audio post-processing and enables shared encoders. Use surround source material and a compatible player; restart the station after changing this setting.')"
+                />
+            </div>
             <template v-if="!isAutoCueEnabled">
                 <div class="row g-3 mb-3">
                     <form-group-multi-check
@@ -433,6 +444,11 @@ const crossfadeOptions = computed<SimpleFormOptionInput>(() => {
         },
     ];
 });
+
+const audioChannelOptions = computed<SimpleFormOptionInput>(() => [
+    { text: $gettext("Stereo (2 channels)"), value: 2 },
+    { text: $gettext("5.1 Surround (6 channels)"), value: 6 },
+]);
 
 const audioProcessingOptions = computed<SimpleFormOptionInput>(() => {
     const audioProcessingOptions: SimpleFormOptionInput = [
