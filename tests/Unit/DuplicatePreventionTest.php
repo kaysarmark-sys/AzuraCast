@@ -91,7 +91,7 @@ class DuplicatePreventionTest extends Unit
         $now = new \DateTimeImmutable('@10000');
         $history = [['song_id' => 'old-song', 'title' => 'Old Song', 'artist' => 'Artist B',
             'timestamp_played' => 9400, 'is_played' => true]];
-        foreach (['Artist B', 'Artist A,Artist B', 'Artist A & ARTIST B', 'Artist A&Artist B,Artist C'] as $artists) {
+        foreach (['Artist B', 'Artist A,Artist B', 'Artist A & ARTIST B', 'Artist A&Artist B,Artist C', 'Artist A; Artist B'] as $artists) {
             $candidate->artist = $artists;
             $recent = $this->duplicatePrevention->applyTimeRanges($history, $now, 5, 20);
             $this->assertNull($this->duplicatePrevention->preventDuplicates([$candidate], $recent));
@@ -110,5 +110,15 @@ class DuplicatePreventionTest extends Unit
         $this->assertSame($candidate, $this->duplicatePrevention->preventDuplicates([$candidate], $queued, true));
         $candidate->artist = 'Artist Bee';
         $this->assertSame($candidate, $this->duplicatePrevention->preventDuplicates([$candidate], $queued));
+    }
+    public function testJustinBieberCollaborations(): void
+    {
+        $candidate = new StationPlaylistQueue();
+        $candidate->artist = 'Justin Bieber, Nicki Minaj';
+        $candidate->title = 'Beauty And A Beat';
+        $history = [['artist' => 'Justin Bieber; Ludacris', 'title' => 'Baby',
+            'song_id' => 'baby', 'timestamp_played' => 8800]];
+        $history = $this->duplicatePrevention->applyTimeRanges($history, new \DateTimeImmutable('@10000'), 120, 120);
+        $this->assertNull($this->duplicatePrevention->getDistinctTrack([$candidate], $history));
     }
 }
