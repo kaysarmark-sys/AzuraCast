@@ -32,7 +32,7 @@ final readonly class PlaylistAction implements SingleActionInterface
         $streamUrls = [];
 
         $fa = $this->adapters->getFrontendAdapter($station);
-        if (null !== $fa) {
+        if (null !== $fa && !$station->backend_config->hls_atmos) {
             foreach ($station->mounts as $mount) {
                 /** @var StationMount $mount */
                 if (!$mount->is_visible_on_public_pages) {
@@ -50,7 +50,7 @@ final readonly class PlaylistAction implements SingleActionInterface
         }
 
         foreach ($station->remotes as $remote) {
-            if (!$remote->is_visible_on_public_pages) {
+            if ($station->backend_config->hls_atmos || !$remote->is_visible_on_public_pages) {
                 continue;
             }
 
@@ -68,14 +68,14 @@ final readonly class PlaylistAction implements SingleActionInterface
             $backend = $this->adapters->getBackendAdapter($station);
             $backendConfig = $station->backend_config;
 
-            if (null !== $backend && $backendConfig->hls_enable_on_public_player) {
+            if (null !== $backend && ($backendConfig->hls_atmos || $backendConfig->hls_enable_on_public_player)) {
                 $streamUrl = $backend->getHlsUrl($station);
                 $streamRow = [
                     'name' => $station->name . ' - HLS',
                     'url' => (string)$streamUrl,
                 ];
 
-                if ($backendConfig->hls_is_default) {
+                if ($backendConfig->hls_atmos || $backendConfig->hls_is_default) {
                     array_unshift($streamUrls, $streamUrl);
                     array_unshift($streams, $streamRow);
                 } else {
