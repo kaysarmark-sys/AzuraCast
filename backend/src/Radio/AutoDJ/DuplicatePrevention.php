@@ -15,6 +15,9 @@ use DateTimeInterface;
  *     text: string|null,
  *     artist: string|null,
  *     title: string|null,
+ *     is_played?: bool,
+ *     prevent_song?: bool,
+ *     prevent_artist?: bool,
  *     timestamp_played: CarbonImmutable|int
  * }
  */
@@ -23,13 +26,13 @@ final class DuplicatePrevention
     use LoggerAwareTrait;
 
     public const array ARTIST_SEPARATORS = [
-        ', ',
+        ',',
         ' feat ',
         ' feat. ',
         ' ft ',
         ' ft. ',
         ' / ',
-        ' & ',
+        '&',
         ' vs. ',
     ];
 
@@ -51,6 +54,9 @@ final class DuplicatePrevention
         $latestSongIdsPlayed = [];
 
         foreach ($playedTracks as $playedTrack) {
+            if (!($playedTrack['prevent_song'] ?? true)) {
+                continue;
+            }
             $songId = $playedTrack['song_id'];
 
             $timestampPlayed = $playedTrack['timestamp_played'];
@@ -142,7 +148,12 @@ final class DuplicatePrevention
         $titles = [];
         foreach ($playedTracks as $playedTrack) {
             $title = $this->prepareStringForMatching($playedTrack['title']);
-            $titles[$title] = $title;
+            if ($playedTrack['prevent_song'] ?? true) {
+                $titles[$title] = $title;
+            }
+            if (!($playedTrack['prevent_artist'] ?? true)) {
+                continue;
+            }
 
             foreach ($this->getArtistParts($playedTrack['artist']) as $artist) {
                 $artists[$artist] = $artist;
@@ -170,13 +181,33 @@ final class DuplicatePrevention
         return null;
     }
 
+    /** Apply independent windows while retaining not-yet-played queue entries. */
+    public function applyTimeRanges(
+        array $playedTracks,
+        DateTimeInterface $expectedPlayTime,
+        int $songMinutes,
+        int $artistMinutes
+    ): array {
+        $songThreshold = $expectedPlayTime->getTimestamp() - max(0, $songMinutes) * 60;
+        $artistThreshold = $expectedPlayTime->getTimestamp() - max(0, $artistMinutes) * 60;
+        foreach ($playedTracks as &$track) {
+            $time = $track['timestamp_played'];
+            $timestamp = $time instanceof DateTimeInterface ? $time->getTimestamp() : $time;
+            $queued = isset($track['is_played']) && !$track['is_played'];
+            $track['prevent_song'] = $queued || $timestamp >= $songThreshold;
+            $track['prevent_artist'] = $artistMinutes > 0 && ($queued || $timestamp >= $artistThreshold);
+        }
+        unset($track);
+        return $playedTracks;
+    }
+
     private function getArtistParts(?string $artists): array
     {
         $dividerString = chr(7);
 
         $artistParts = explode(
             $dividerString,
-            str_replace(self::ARTIST_SEPARATORS, $dividerString, trim($artists ?? ''))
+            str_replace(self::ARTIST_SEPARATORS, $dividerString, mb_strtolower(trim($artists ?? '')))
         );
 
         return array_filter(
