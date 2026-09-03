@@ -34,6 +34,16 @@
                 />
 
                 <form-group-checkbox
+                    id="edit_form_backend_hls_atmos"
+                    class="col-md-12"
+                    :field="r$.backend_config.hls_atmos"
+                    :label="$gettext('Enable Dolby Atmos HLS Passthrough')"
+                />
+                <p class="text-muted">
+                    {{ $gettext('Adds /atmos/master.m3u8 to this station’s HLS address. Follows the current song with additional buffering. Preserves Dolby Digital Plus Atmos files; other audio plays as ordinary Dolby Digital Plus surround. Crossfades, normalization and other AutoDJ processing are not applied to file playback on this stream.') }}
+                </p>
+
+                <form-group-checkbox
                     id="edit_form_backend_hls_is_default"
                     class="col-md-12"
                     :field="r$.backend_config.hls_is_default"
