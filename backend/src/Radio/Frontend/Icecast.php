@@ -258,7 +258,13 @@ class Icecast extends AbstractFrontend
             if (!empty($mountRow->fallback_mount)) {
                 $mount['fallback-mount'] = $mountRow->fallback_mount;
                 $mount['fallback-override'] = 1;
-            } elseif ($mountRow->enable_autodj) {
+            } elseif (
+                $mountRow->enable_autodj
+                && ($station->backend_config->audio_channels === 2
+                    || ($mountRow->autodj_format ?? StreamFormats::default()) === StreamFormats::Mp3)
+            ) {
+                // Bundled fallback files are stereo. Do not splice these into
+                // a surround stream; Liquidsoap's fallback is encoded as 5.1.
                 $autoDjFormat = $mountRow->autodj_format ?? StreamFormats::default();
                 $autoDjBitrate = $mountRow->autodj_bitrate;
 
