@@ -318,6 +318,14 @@ class Icecast extends AbstractFrontend
             $config = Arrays::arrayMergeRecursiveDistinct($config, $customConfParsed);
         }
 
+        if ($station->backend_config->hls_atmos) {
+            $config['listen-socket'] = [
+                'port' => $frontendConfig->port,
+                'bind-address' => '127.0.0.1',
+            ];
+            $config['relay'] = [];
+        }
+
         return $config;
     }
 
