@@ -60,6 +60,22 @@ final class PhpReader extends AbstractReader
 
             $toProcess[] = $this->convertReplayGainBackIntoText($info['replay_gain'] ?? []);
 
+            // getID3 retains only the last repeated QuickTime artist atom.
+            if (isset($info['quicktime'])) {
+                $artists = QuicktimeArtists::read($path);
+                if ($artists !== []) {
+                    foreach ($toProcess as &$tagSet) {
+                        foreach (array_keys($tagSet) as $tagName) {
+                            if (mb_strtolower((string)$tagName) === 'artist') {
+                                unset($tagSet[$tagName]);
+                            }
+                        }
+                    }
+                    unset($tagSet);
+                    $toProcess[] = ['artist' => $artists];
+                }
+            }
+
             $this->aggregateMetaTags($metadata, $toProcess);
 
             $metadata->setMimeType($info['mime_type']);
