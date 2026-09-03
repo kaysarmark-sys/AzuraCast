@@ -780,6 +780,10 @@ final class ConfigWriter implements EventSubscriberInterface
     public function writeLocalBroadcastConfiguration(WriteLiquidsoapConfiguration $event): void
     {
         $station = $event->getStation();
+        if ($station->backend_config->hls_atmos) {
+            return;
+        }
+
 
         if (FrontendAdapters::Remote === $station->frontend_type) {
             return;
@@ -820,6 +824,14 @@ final class ConfigWriter implements EventSubscriberInterface
         // Configure the outbound broadcast.
         $hlsStreams = [];
 
+        // Multiple renditions may use the same encoding. Bind each encoded
+        // track once, and copy it into every matching rendition.
+        $hlsEncoders = [];
+        foreach ($station->hls_streams as $stream) {
+            $encoding = $stream->getEncodingFormat();
+            $hlsEncoders[$encoding->getVariableName('hls')] = $encoding;
+        }
+
         // Build the HLS stream encoder destinations.
         foreach ($station->hls_streams as $hlsStream) {
             $streamVarName = self::cleanUpVarName($hlsStream->name);
@@ -827,12 +839,12 @@ final class ConfigWriter implements EventSubscriberInterface
             $ffmpegStreams = [];
 
             if ($shareEncoders) {
-                foreach ($station->hls_streams as $hlsInnerStream) {
+                foreach ($hlsEncoders as $hlsInnerName => $hlsInnerEncoding) {
                     $innerStreamVarName = self::cleanUpVarName(
-                        $hlsInnerStream->getEncodingFormat()->getVariableName('hls')
+                        $hlsInnerName
                     );
 
-                    $ffmpegStreams[] = ($hlsInnerStream->id === $hlsStream->id)
+                    $ffmpegStreams[] = ($hlsInnerName === $hlsStream->getEncodingFormat()->getVariableName('hls'))
                         ? '%' . $innerStreamVarName . '.copy'
                         : '%' . $innerStreamVarName . '.drop';
                 }
@@ -864,10 +876,9 @@ final class ConfigWriter implements EventSubscriberInterface
             $i = 0;
             $hlsSourceTracks = [];
 
-            foreach ($station->hls_streams as $hlsStream) {
+            foreach ($hlsEncoders as $encoding) {
                 $i++;
 
-                $encoding = $hlsStream->getEncodingFormat();
                 $encoderVarName = $encoding->getVariableName('radio');
                 $hlsVarName = $encoding->getVariableName('hls');
 
@@ -934,6 +945,10 @@ final class ConfigWriter implements EventSubscriberInterface
     public function writeRemoteBroadcastConfiguration(WriteLiquidsoapConfiguration $event): void
     {
         $station = $event->getStation();
+        if ($station->backend_config->hls_atmos) {
+            return;
+        }
+
 
         $lsConfig = [
             '# Remote Relays',
