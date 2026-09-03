@@ -2445,6 +2445,7 @@ export interface StationBackendConfiguration {
     /** AutoDJ output channels: stereo (2) or 5.1 surround (6). */
     audio_channels?: 2 | 6;
     hls_atmos?: boolean;
+    output_mode?: "stereo" | "atmos";
     charset?: string;
     dj_port?: number | null;
     telnet_port?: number | null;
