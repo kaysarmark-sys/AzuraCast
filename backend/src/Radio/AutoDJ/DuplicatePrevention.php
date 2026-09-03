@@ -27,6 +27,7 @@ final class DuplicatePrevention
 
     public const array ARTIST_SEPARATORS = [
         ',',
+        ';',
         ' feat ',
         ' feat. ',
         ' ft ',
