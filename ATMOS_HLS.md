@@ -3,11 +3,13 @@
 Enable **Station Profile → Edit → HLS → Enable Dolby Atmos HLS Passthrough**
 alongside ordinary HLS. Save and restart the station after initially enabling HLS.
 The additional URL is `/hls/STATION_SHORTCODE/atmos/master.m3u8`.
-The API setting is `backend_config.hls_atmos`; the default is false.
+The API setting is `backend_config.output_mode`: `stereo` (default) or `atmos`.
+Legacy `hls_atmos` settings remain accepted. Legacy six-channel AutoDJ settings
+are normalized to stereo.
 
 This separate worker follows the station's current-song record without consuming
 its scheduling queue. Dolby Digital Plus files are packet-copied into fragmented
-MP4 HLS. Other files are encoded to 48 kHz, six-channel Dolby Digital Plus at
+MP4 HLS. Other files are encoded to 48 kHz, stereo Dolby Digital Plus at
 768 kbps. Stereo sources do not acquire discrete surround content. When no local
 file is available, including live DJ and remote storage playback, it transcodes
 the ordinary HLS stream as non-Atmos fallback. Ordinary HLS must remain enabled.
@@ -34,7 +36,7 @@ ordinary surround must be checked on the target iPhone/receiver; a desktop codec
 probe alone cannot establish what the device will display or render.
 
 The Atmos URL uses the existing station HLS serving and blocklist path. It is a
-separate URL, not automatically substituted into the public player's AAC choices.
+mode-specific URL, selected automatically by the public player.
 Its audience is not currently added to the per-AAC-rendition listener totals.
 
 The production Dockerfile installs `util/atmos-hls/supervisor.conf`. The worker log
@@ -46,7 +48,7 @@ in-flight requests; live fallback packaging uses a bounded rolling window.
 
 `ATMOS_TEST_FILE=/path/to/user-provided-atmos.m4a python3 util/atmos-hls/test_worker.py`
 
-Tests check JOC metadata, exact compressed-packet preservation, six-channel
+Tests check JOC metadata, exact compressed-packet preservation, stereo
 non-Atmos fallback, discontinuity/map changes, sequence ordering and disable
 cleanup. No commercial test audio is included in the repository or image.
 
