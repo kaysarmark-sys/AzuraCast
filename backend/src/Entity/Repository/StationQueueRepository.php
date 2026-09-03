@@ -125,7 +125,7 @@ final class StationQueueRepository extends AbstractStationBasedRepository
 
         return $this->em->createQuery(
             <<<'DQL'
-                SELECT sq.song_id, sq.timestamp_played, sq.title, sq.artist
+                SELECT sq.song_id, sq.timestamp_played, sq.title, sq.artist, sq.is_played
                 FROM App\Entity\StationQueue sq
                 WHERE sq.station = :station
                 AND (sq.is_played = 0 OR sq.timestamp_played >= :threshold)
