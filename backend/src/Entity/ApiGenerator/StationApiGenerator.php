@@ -97,6 +97,13 @@ final readonly class StationApiGenerator
             ? new ResolvableUrl($backend->getHlsUrl($station, $baseUri))
             : null;
 
+        if ($station->backend_config->hls_atmos) {
+            $response->mounts = [];
+            $response->remotes = [];
+            $response->hls_is_default = true;
+            $response->listen_url = $response->hls_url;
+        }
+
         $hlsListeners = 0;
         foreach ($station->hls_streams as $hlsStream) {
             $hlsListeners += $hlsStream->listeners;
