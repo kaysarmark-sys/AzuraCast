@@ -44,6 +44,11 @@ final class ConfigWriter implements EventSubscriberInterface
         $listenBaseUrl = CustomUrls::getListenUrl($station);
         $listenBaseUrlForRegex = preg_quote($listenBaseUrl);
         $port = $station->frontend_config->port;
+        if ($station->backend_config->hls_atmos) {
+            $event->appendBlock("location ~ ^({$listenBaseUrlForRegex}|/radio/{$port})(/|$) { return 404; }");
+            return;
+        }
+
 
         $event->appendBlock(
             <<<NGINX
@@ -104,6 +109,15 @@ final class ConfigWriter implements EventSubscriberInterface
 
         $hlsBaseUrl = CustomUrls::getHlsUrl($station);
         $hlsFolder = $station->getRadioHlsDir();
+        if ($station->backend_config->hls_atmos) {
+            // Ordinary HLS exists only as the local fallback source.
+            $event->appendBlock("location = {$hlsBaseUrl}/live.m3u8 { return 404; }");
+            $hlsBaseUrl .= '/atmos';
+            $hlsFolder .= '/atmos';
+        } else {
+            $event->appendBlock("location ^~ {$hlsBaseUrl}/atmos/ { return 404; }");
+        }
+
 
         $hlsLogPath = self::getHlsLogFile($station);
 
