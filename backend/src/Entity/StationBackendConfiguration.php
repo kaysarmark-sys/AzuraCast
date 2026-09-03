@@ -20,18 +20,31 @@ final class StationBackendConfiguration extends AbstractArrayEntity
 {
     #[OA\Property(description: 'Enable the separate Atmos-preserving HLS stream.')]
     public bool $hls_atmos = false {
-        set(string|bool $value) => Types::bool($value, false, true);
+        get => $this->output_mode === 'atmos';
+        set(string|bool $value) {
+            $this->hls_atmos = Types::bool($value, false, true);
+            $this->output_mode = $this->hls_atmos ? 'atmos' : 'stereo';
+        }
     }
 
-    #[OA\Property(description: 'AutoDJ output channels: 2 (stereo) or 6 (5.1 surround).', enum: [2, 6])]
+    #[OA\Property(description: 'Station playback mode.', enum: ['stereo', 'atmos'])]
+    public string $output_mode = 'stereo' {
+        set(string $value) {
+            if (!in_array($value, ['stereo', 'atmos'], true)) {
+                throw new \InvalidArgumentException('Output mode must be stereo or atmos.');
+            }
+            $this->output_mode = $value;
+        }
+    }
+
+    // Accept old configurations while retiring the six-channel AutoDJ path.
     public int $audio_channels = 2 {
-        set (int|string|null $value) => Types::int($value, 2) === 6 ? 6 : 2;
+        set (int|string|null $value) => 2;
     }
 
     public function shouldShareEncoders(): bool
     {
-        // Share the surround encoders; MP3 uses a separate raw FFmpeg downmix.
-        return $this->audio_channels === 6 || $this->share_encoders;
+        return false;
     }
 
     #[OA\Property]

@@ -410,7 +410,9 @@ final class Station implements Stringable, IdentifiableEntityInterface
         ORM\Column,
         Serializer\Groups([EntityGroupsInterface::GROUP_GENERAL, EntityGroupsInterface::GROUP_ALL])
     ]
-    public bool $enable_hls = false;
+    public bool $enable_hls = false {
+        get => $this->enable_hls || $this->backend_config->hls_atmos;
+    }
 
     #[
         ORM\Column,
