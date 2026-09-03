@@ -102,6 +102,7 @@ final class ConfigWriter implements EventSubscriberInterface
         $logLevel = $this->environment->isProduction() ? 3 : 4;
 
         $backendConfig = $event->getBackendConfig();
+        $audioChannels = $backendConfig->audio_channels;
         $useComputeAutocue = $backendConfig->enable_auto_cue ? 'true' : 'false';
 
         $enableCrossfade = $backendConfig->isCrossfadeEnabled() ? 'true' : 'false';
@@ -129,6 +130,7 @@ final class ConfigWriter implements EventSubscriberInterface
         $event->appendBlock(
             <<<LIQ
             # AzuraCast Common Runtime Functions
+            settings.frame.audio.channels := {$audioChannels}
             %include "{$commonLibPath}"
 
             log.level := {$logLevel}
@@ -162,6 +164,11 @@ final class ConfigWriter implements EventSubscriberInterface
 
             LIQ
         );
+
+        if ($audioChannels === 6) {
+            // FFmpeg preserves and converts channel layouts when decoding mixed media.
+            $event->appendLines(['settings.decoder.decoders := ["ffmpeg"]']);
+        }
 
         $perfMode = $backendConfig->getPerformanceModeEnum();
         if ($perfMode !== StationBackendPerformanceModes::Disabled) {
@@ -247,15 +254,17 @@ final class ConfigWriter implements EventSubscriberInterface
                 $playlistParams[] = 'reload_mode="watch"';
                 $playlistParams[] = '"' . $playlistFilePath . '"';
 
-                $playlistConfigLines[] = $playlistVarName . ' = playlist('
-                    . implode(',', $playlistParams) . ')';
+                $playlistConfigLines[] = $playlistVarName . ' = ' . self::decodeStationSource(
+                    $event,
+                    'playlist(' . implode(',', $playlistParams) . ')'
+                );
 
                 if ($playlist->backendMerge()) {
                     $playlistConfigLines[] = $playlistVarName . ' = merge_tracks(id="merge_' . $playlistVarName . '", ' . $playlistVarName . ')';
                 }
             } elseif (PlaylistRemoteTypes::Playlist === $playlist->remote_type) {
                 $playlistFunc = 'playlist(' . self::toRawString($playlist->remote_url) . ')';
-                $playlistConfigLines[] = $playlistVarName . ' = ' . $playlistFunc;
+                $playlistConfigLines[] = $playlistVarName . ' = ' . self::decodeStationSource($event, $playlistFunc);
             } else {
                 // Special handling for Remote Stream URLs.
                 $remoteUrl = $playlist->remote_url;
@@ -272,7 +281,7 @@ final class ConfigWriter implements EventSubscriberInterface
                 };
 
                 $remoteUrlFunc = 'mksafe(buffer(buffer=' . $buffer . '., '
-                    . $inputFunc . '(' . self::toRawString($remoteUrl) . ')))';
+                    . self::decodeStationSource($event, $inputFunc . '(' . self::toRawString($remoteUrl) . ')') . '))';
 
                 if (0 === $scheduleItems->count()) {
                     $fallbackRemoteUrl = $remoteUrlFunc;
@@ -470,14 +479,16 @@ final class ConfigWriter implements EventSubscriberInterface
 
         $requestsQueueName = LiquidsoapQueues::Requests->value;
         $interruptingQueueName = LiquidsoapQueues::Interrupting->value;
+        $requestsSource = self::decodeStationSource($event, 'requests');
+        $interruptingSource = self::decodeStationSource($event, 'interrupting_queue');
 
         $event->appendBlock(
             <<< LIQ
             requests = request.queue(id="{$requestsQueueName}", timeout=settings.azuracast.request_timeout())
-            radio = fallback(id="requests_fallback", track_sensitive = true, [requests, radio])
+            radio = fallback(id="requests_fallback", track_sensitive = true, [{$requestsSource}, radio])
 
             interrupting_queue = request.queue(id="{$interruptingQueueName}", timeout=settings.azuracast.request_timeout())
-            radio = fallback(id="interrupting_fallback", track_sensitive = false, [interrupting_queue, radio])
+            radio = fallback(id="interrupting_fallback", track_sensitive = false, [{$interruptingSource}, radio])
             LIQ
         );
 
@@ -577,6 +588,7 @@ final class ConfigWriter implements EventSubscriberInterface
         }
 
         $harborParams = implode(', ', $harborParams);
+        $liveSource = self::decodeStationSource($event, 'live');
 
         $event->appendBlock(
             <<<LIQ
@@ -588,6 +600,7 @@ final class ConfigWriter implements EventSubscriberInterface
             live = input.harbor({$harborParams})
             live.on_connect(synchronous=false, azuracast.live_connected)
             live.on_disconnect(synchronous=false, azuracast.live_disconnected)
+            live = {$liveSource}
 
             def insert_missing(m) =
                 def updates =
@@ -641,6 +654,16 @@ final class ConfigWriter implements EventSubscriberInterface
             assert(null !== $recordEncoding);
 
             $formatString = $this->getFullFfmpegString($recordEncoding);
+            $recordSource = 'live';
+            if ($settings->audio_channels === 6) {
+                $recordAudio = $this->getFfmpegAudioString($recordEncoding, 6);
+                $recordContainer = $recordEncoding->format->getFfmpegContainer();
+                $recordInput = $recordEncoding->format === StreamFormats::Mp3
+                    ? 'azuracast.stereo_downmix(live)'
+                    : 'live';
+                $recordSource = $recordInput;
+                $formatString = '%ffmpeg(format="' . $recordContainer . '", ' . $recordAudio . ')';
+            }
             $recordExtension = $recordEncoding->format->getExtension();
             $recordPathPrefix = StationStreamerBroadcast::PATH_PREFIX;
 
@@ -656,7 +679,7 @@ final class ConfigWriter implements EventSubscriberInterface
                             ""
                         end
                     end,
-                    live,
+                    {$recordSource},
                     fallible=true,
                     on_close=fun (tempPath) -> begin
                         newPath = string.replace(pattern=".tmp$", (fun(_) -> ""), tempPath)
@@ -709,7 +732,7 @@ final class ConfigWriter implements EventSubscriberInterface
     {
         $station = $event->getStation();
 
-        if (!$event->getBackendConfig()->share_encoders) {
+        if (!$event->getBackendConfig()->shouldShareEncoders()) {
             return;
         }
 
@@ -728,6 +751,10 @@ final class ConfigWriter implements EventSubscriberInterface
             foreach ($collection as $encodable) {
                 $encoder = $encodable->getEncodingFormat();
 
+                if ($event->getBackendConfig()->audio_channels === 6 && $encoder?->format === StreamFormats::Mp3) {
+                    continue;
+                }
+
                 if (null !== $encoder) {
                     $varName = $encoder->getVariableName('radio');
                     $encoders[$varName] = $encoder;
@@ -737,7 +764,7 @@ final class ConfigWriter implements EventSubscriberInterface
 
         foreach ($encoders as $varName => $encoder) {
             $varName = self::cleanUpVarName($varName);
-            $audioString = $this->getFfmpegAudioString($encoder);
+            $audioString = $this->getFfmpegAudioString($encoder, $event->getBackendConfig()->audio_channels);
 
             $event->appendBlock(
                 <<<LIQ
@@ -784,7 +811,7 @@ final class ConfigWriter implements EventSubscriberInterface
             return;
         }
 
-        $shareEncoders = $event->getBackendConfig()->share_encoders;
+        $shareEncoders = $event->getBackendConfig()->shouldShareEncoders();
 
         $lsConfig = [
             '# HLS Broadcasting',
@@ -811,7 +838,8 @@ final class ConfigWriter implements EventSubscriberInterface
                 }
             } else {
                 $ffmpegStreams[] = $this->getFfmpegAudioString(
-                    $hlsStream->getEncodingFormat()
+                    $hlsStream->getEncodingFormat(),
+                    $event->getBackendConfig()->audio_channels
                 );
             }
 
@@ -1199,9 +1227,13 @@ final class ConfigWriter implements EventSubscriberInterface
     ): string {
         $station = $event->getStation();
         $charset = $event->getBackendConfig()->charset;
-        $shareEncoders = $event->getBackendConfig()->share_encoders;
+        $shareEncoders = $event->getBackendConfig()->shouldShareEncoders();
 
         $encoding = $source->encoding;
+        $downmix = $event->getBackendConfig()->audio_channels === 6 && $encoding->format === StreamFormats::Mp3;
+        if ($downmix) {
+            $shareEncoders = false;
+        }
 
         $outputParams = [];
 
@@ -1210,7 +1242,7 @@ final class ConfigWriter implements EventSubscriberInterface
         if ($shareEncoders) {
             $outputParams[] = '%ffmpeg(format="' . $container . '", %audio.copy)';
         } else {
-            $audioString = $this->getFfmpegAudioString($encoding);
+            $audioString = $this->getFfmpegAudioString($encoding, $event->getBackendConfig()->audio_channels);
             $outputParams[] = '%ffmpeg(format="' . $container . '", ' . $audioString . ')';
         }
 
@@ -1269,7 +1301,7 @@ final class ConfigWriter implements EventSubscriberInterface
         if ($shareEncoders) {
             $outputParams[] = self::cleanUpVarName($encoding->getVariableName('radio'));
         } else {
-            $outputParams[] = 'radio';
+            $outputParams[] = $downmix ? 'azuracast.stereo_downmix(radio)' : 'radio';
         }
 
         $outputCommand = ($source->isShoutcast)
@@ -1277,6 +1309,13 @@ final class ConfigWriter implements EventSubscriberInterface
             : 'output.icecast';
 
         return $outputCommand . '(' . implode(', ', $outputParams) . ')';
+    }
+
+    private static function decodeStationSource(WriteLiquidsoapConfiguration $event, string $source): string
+    {
+        return $event->getBackendConfig()->audio_channels === 6
+            ? 'ffmpeg.raw.decode.audio(' . $source . ')'
+            : $source;
     }
 
     private function getFullFfmpegString(
@@ -1293,6 +1332,7 @@ final class ConfigWriter implements EventSubscriberInterface
 
     private function getFfmpegAudioString(
         EncodingFormat $encoding,
+        int $channels = 2,
     ): string {
         $bitrate = $encoding->bitrate;
 
@@ -1301,27 +1341,35 @@ final class ConfigWriter implements EventSubscriberInterface
                 $afterburner = ($encoding->bitrate >= 160) ? '1' : '0';
                 $profile = $encoding->subProfile?->getProfileName()
                     ?? HlsStreamProfiles::default()->getProfileName();
+                // HE-AAC v2 uses parametric stereo and cannot encode 5.1.
+                if ($channels === 6) {
+                    $profile = HlsStreamProfiles::AacLowComplexity->getProfileName();
+                }
 
                 return <<<LIQ
-                %audio(codec="libfdk_aac", samplerate=44100, channels=2, b="{$bitrate}k", profile="{$profile}", afterburner={$afterburner})
+                %audio(codec="libfdk_aac", samplerate=44100, channels={$channels}, b="{$bitrate}k", profile="{$profile}", afterburner={$afterburner})
                 LIQ;
 
             case StreamFormats::Ogg:
                 return <<<LIQ
-                %audio(codec="libvorbis", samplerate=48000, b="{$bitrate}k", channels=2)
+                %audio(codec="libvorbis", samplerate=48000, b="{$bitrate}k", channels={$channels})
                 LIQ;
 
             case StreamFormats::Opus:
+                $mapping = $channels === 6 ? ', mapping_family=1' : '';
                 return <<<LIQ
-                %audio(codec="libopus", samplerate=48000, b="{$bitrate}k", vbr="constrained", application="audio", channels=2, compression_level=10, cutoff=20000)
+                %audio(codec="libopus", samplerate=48000, b="{$bitrate}k", vbr="constrained", application="audio", channels={$channels}, compression_level=10, cutoff=20000{$mapping})
                 LIQ;
 
             case StreamFormats::Flac:
                 return <<<LIQ
-                %audio(codec="flac", channels=2, ar=48000)
+                %audio(codec="flac", channels={$channels}, ar=48000)
                 LIQ;
 
             case StreamFormats::Mp3:
+                if ($channels === 6) {
+                    return '%audio.raw(codec="libmp3lame", ac=2, ar=44100, b="' . $bitrate . 'k")';
+                }
                 return <<<LIQ
                 %audio(codec="libmp3lame", ac=2, ar=44100, b="{$bitrate}k")
                 LIQ;
