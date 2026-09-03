@@ -169,7 +169,7 @@ final class Liquidsoap extends AbstractLocalAdapter
     {
         $baseUrl ??= $this->router->getBaseUrl();
         return $baseUrl->withPath(
-            $baseUrl->getPath() . CustomUrls::getHlsUrl($station) . '/live.m3u8'
+            $baseUrl->getPath() . CustomUrls::getHlsUrl($station) . ($station->backend_config->hls_atmos ? '/atmos/master.m3u8' : '/live.m3u8')
         );
     }
 
