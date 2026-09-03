@@ -343,6 +343,15 @@
                         :label="$gettext('Duplicate Prevention Time Range (Minutes)')"
                         :description="$gettext('This specifies the time range (in minutes) of the song history that the duplicate song prevention algorithm should take into account.')"
                     />
+                    <form-group-field
+                        id="edit_form_backend_artist_duplicate_prevention_time_range"
+                        class="col-md-6"
+                        :field="r$.backend_config.artist_duplicate_prevention_time_range"
+                        input-type="number"
+                        :input-attrs="{ min: '0', step: '1' }"
+                        :label="$gettext('Artist Duplicate Prevention Time Range (Minutes)')"
+                        :description="$gettext('Avoid recently played artists for this many minutes. Checks each artist separated by a comma or &. Set to 0 to disable artist matching. Applies to playlists with duplicate prevention enabled; repeats may occur if no eligible songs remain.')"
+                    />
                 </div>
             </form-fieldset>
         </template>

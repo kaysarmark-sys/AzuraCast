@@ -86,6 +86,7 @@ export const useAdminStationsForm = defineStore("form-admin-stations", () => {
             charset: "UTF-8",
             performance_mode: "disabled",
             duplicate_prevention_time_range: 120,
+            artist_duplicate_prevention_time_range: 120,
             hls_enable_on_public_player: false,
             hls_is_default: false,
             hls_segment_length: 4,
@@ -183,6 +184,7 @@ export const useAdminStationsForm = defineStore("form-admin-stations", () => {
                     fields.backend_config.charset,
                     fields.backend_config.performance_mode,
                     fields.backend_config.duplicate_prevention_time_range,
+                    fields.backend_config.artist_duplicate_prevention_time_range,
                 ],
                 hlsTab: [
                     fields.enable_hls,
