@@ -145,6 +145,7 @@ Utility Functions
 
 %include "./crossfade.liq"
 %include "./utilities.liq"
+%include "./surround.liq"
 
 # Transport for HTTPS outputs.
 https_transport = http.transport.ssl()
@@ -433,12 +434,21 @@ def azuracast.wait_for_next_song(autodj) =
 end
 
 def azuracast.enable_autodj(s) =
-    dynamic = request.dynamic(
-        id="next_song",
-        timeout=settings.azuracast.request_timeout(),
-        retry_delay=10.,
-        azuracast.autodj_next_song
-    )
+    dynamic = if settings.frame.audio.channels() == 6 then
+        ffmpeg.raw.decode.audio(request.dynamic(
+            id="next_song",
+            timeout=settings.azuracast.request_timeout(),
+            retry_delay=10.,
+            azuracast.autodj_next_song
+        ))
+    else
+        request.dynamic(
+            id="next_song",
+            timeout=settings.azuracast.request_timeout(),
+            retry_delay=10.,
+            azuracast.autodj_next_song
+        )
+    end
 
     dynamic_startup = fallback(
         id = "dynamic_startup",
@@ -664,7 +674,12 @@ Fallback
 ----->#
 
 def azuracast.add_fallback(s) =
-    error_file = single(id="error_jingle", "annotate:liq_disable_autocue=\"true\":#{settings.azuracast.fallback_path()}")
+    error_uri = "annotate:liq_disable_autocue=\"true\":#{settings.azuracast.fallback_path()}"
+    error_file = if settings.frame.audio.channels() == 6 then
+        ffmpeg.raw.decode.audio(single(id="error_jingle", error_uri))
+    else
+        single(id="error_jingle", error_uri)
+    end
 
     def tag_error_file(_) =
         [("is_error_file", "true")]
