@@ -6,6 +6,7 @@ use App\Console\Command;
 
 return function (App\Event\BuildConsoleCommands $event) {
     $event->addAliases([
+        'azuracast:internal:atmos-sources' => Command\Internal\AtmosSourcesCommand::class,
         'azuracast:acme:get-certificate' => Command\Acme\GetCertificateCommand::class,
         'azuracast:acme:reload' => Command\Acme\ReloadCommand::class,
         'azuracast:backup' => Command\Backup\BackupCommand::class,
