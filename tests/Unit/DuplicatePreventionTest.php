@@ -82,4 +82,33 @@ class DuplicatePreventionTest extends Unit
         $noDuplicatesResult = $this->duplicatePrevention->getDistinctTrack($eligibleTracks, $noDuplicatesTest);
         $this->assertNotNull($noDuplicatesResult);
     }
+    public function testArtistSeparatorsAndIndependentWindows(): void
+    {
+        $candidate = new StationPlaylistQueue();
+        $candidate->media_id = 1;
+        $candidate->song_id = 'new-song';
+        $candidate->title = 'New Song';
+        $now = new \DateTimeImmutable('@10000');
+        $history = [['song_id' => 'old-song', 'title' => 'Old Song', 'artist' => 'Artist B',
+            'timestamp_played' => 9400, 'is_played' => true]];
+        foreach (['Artist B', 'Artist A,Artist B', 'Artist A & ARTIST B', 'Artist A&Artist B,Artist C'] as $artists) {
+            $candidate->artist = $artists;
+            $recent = $this->duplicatePrevention->applyTimeRanges($history, $now, 5, 20);
+            $this->assertNull($this->duplicatePrevention->preventDuplicates([$candidate], $recent));
+            $expired = $this->duplicatePrevention->applyTimeRanges($history, $now, 20, 5);
+            $this->assertSame($candidate, $this->duplicatePrevention->preventDuplicates([$candidate], $expired));
+        }
+        $candidate->artist = 'Artist B';
+        $disabled = $this->duplicatePrevention->applyTimeRanges($history, $now, 20, 0);
+        $this->assertSame($candidate, $this->duplicatePrevention->preventDuplicates([$candidate], $disabled));
+        $candidate->title = 'Old Song';
+        $this->assertNull($this->duplicatePrevention->preventDuplicates([$candidate], $disabled));
+        $candidate->title = 'New Song';
+        $history[0]['is_played'] = false;
+        $queued = $this->duplicatePrevention->applyTimeRanges($history, $now, 5, 5);
+        $this->assertNull($this->duplicatePrevention->preventDuplicates([$candidate], $queued));
+        $this->assertSame($candidate, $this->duplicatePrevention->preventDuplicates([$candidate], $queued, true));
+        $candidate->artist = 'Artist Bee';
+        $this->assertSame($candidate, $this->duplicatePrevention->preventDuplicates([$candidate], $queued));
+    }
 }
