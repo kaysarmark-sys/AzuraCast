@@ -18,6 +18,17 @@ use OpenApi\Attributes as OA;
 #[OA\Schema(schema: "StationBackendConfiguration", type: "object")]
 final class StationBackendConfiguration extends AbstractArrayEntity
 {
+    #[OA\Property(description: 'AutoDJ output channels: 2 (stereo) or 6 (5.1 surround).', enum: [2, 6])]
+    public int $audio_channels = 2 {
+        set (int|string|null $value) => Types::int($value, 2) === 6 ? 6 : 2;
+    }
+
+    public function shouldShareEncoders(): bool
+    {
+        // Share the surround encoders; MP3 uses a separate raw FFmpeg downmix.
+        return $this->audio_channels === 6 || $this->share_encoders;
+    }
+
     #[OA\Property]
     public string $charset = 'UTF-8' {
         set (?string $value) => Types::string($value, 'UTF-8', true);
@@ -129,7 +140,8 @@ final class StationBackendConfiguration extends AbstractArrayEntity
 
     public function isAudioProcessingEnabled(): bool
     {
-        return AudioProcessingMethods::None !== $this->getAudioProcessingMethodEnum();
+        return $this->audio_channels === 2
+            && AudioProcessingMethods::None !== $this->getAudioProcessingMethodEnum();
     }
 
     #[OA\Property]
